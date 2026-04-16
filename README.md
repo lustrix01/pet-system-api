@@ -2,7 +2,12 @@
 
 Hey team! This repository holds our Group REST API Enhancement project. I have initialized the repository with our core backend architecture.
 
-### System Overview Plan
+## Table of Contents
+1. [System Overview & Plan](#system-overview-plan)
+2. [Current Backend Files](#current-backend-files)
+3. [Client Screenshots](tba)
+
+### System Overview & Plan
 
 The goal of this project is to build a centralized REST API that can communicate with multiple different client applications.
 
@@ -29,4 +34,7 @@ I have set up the initial backend files to get us started:
   - **Currently Implemented:** 
       - The `register` endpoint. It accepts a username and password, checks if the user already exists, hashes the password for security, and saves it to the database.
       - The `login` endpoint. It accepts a username and password, checks if both fields match its corresponding record in the database, and responds accordingly: (1) for **empty field/s**, returns an error; (2) if **user does not exist**, it returns an error; (3) if the **password is incorrect**, it blocks login and returns an error; (4) if **username and password match** the ones in the database, it returns a success response.
+      - The `create_pet` endpoint. It accepts a pet name and its type (species), and saves it into the database.
+      - The `delete_pet` endpoint. It accepts a pet ID and deletes the pet from the database. 
+      - The `get_pets` endpoint. It optionally accepts a user ID. If left null (empty), it will return all pets in the database. If a user ID is specified, it responds with all the pets for that user.
   
