@@ -23,4 +23,7 @@ I have set up the initial backend files to get us started:
 - **`api.php` (REST API Logic):**
   - This is our main controller. It forces all responses into strict JSON format with proper HTTP headers.
   - Includes a custom `respond()` function to easily send back standard HTTP status codes (200, 201, 400, 409, 500).
-  - **Currently Implemented:** The `register` endpoint. It accepts a username and password, checks if the user already exists, hashes the password for security, and saves it to the database.
+  - **Currently Implemented:** 
+      - The `register` endpoint. It accepts a username and password, checks if the user already exists, hashes the password for security, and saves it to the database.
+      - The `login` endpoint. It accepts a username and password, checks if both fields match its corresponding record in the database, and responds accordingly: (1) for **empty field/s**, returns an error; (2) if **user does not exist**, it returns an error; (3) if the **password is incorrect**, it blocks login and returns an error; (4) if **username and password match** the ones in the database, it returns a success response.
+  
