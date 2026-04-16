@@ -76,9 +76,6 @@ elseif ($action === "login") {
         respond(401, "error", "Incorrect password");
     }
 }
-<<<<<<< Updated upstream
-
-=======
 // ADD PET
 // accepts user_id, pet_name and pet_type, validates them and adds new pet to database
 elseif ($action === "add_pet") {
@@ -111,7 +108,6 @@ elseif ($action === "delete_pet") {
         ? respond(200, "success", "Pet deleted successfully")
         : respond(500, "error", "Delete failed");
 }
->>>>>>> Stashed changes
 // INVALID
 // if action is not valid i.e. does not exist, respond with error
 else {
