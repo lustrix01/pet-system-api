@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Docker Compose (not needed in build context)
+docker-compose*.yml
+
+# Environment files
+.env
+.env.*
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+docs/
