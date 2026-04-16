@@ -93,6 +93,8 @@ elseif ($action === "add_pet") {
         ? respond(201, "success", "Pet added successfully")
         : respond(500, "error", "Failed to add pet");
 }
+
+
 // DELETE PET
 // accepts pet id, validates it and deletes the pet from database
 elseif ($action === "delete_pet") {
@@ -108,6 +110,31 @@ elseif ($action === "delete_pet") {
         ? respond(200, "success", "Pet deleted successfully")
         : respond(500, "error", "Delete failed");
 }
+
+
+// GET PETS
+// function that returns pets. user_id is an optional parameter; if left empty, it returns all pets.
+elseif ($action === "get_pets") {
+    $user_id = $_POST['user_id'] ?? null;
+
+    if ($user_id) {
+        $stmt = $conn->prepare("SELECT pets.id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id WHERE pets.user_id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+    } else {
+        $res = $conn->query("SELECT pets.id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id");
+    }
+
+    $data = [];
+    while ($row = $res->fetch_assoc()) {
+        $data[] = $row;
+    }
+
+    respond(200, "success", "Pets retrieved", $data);
+}
+
+
 // INVALID
 // if action is not valid i.e. does not exist, respond with error
 else {
