@@ -76,7 +76,42 @@ elseif ($action === "login") {
         respond(401, "error", "Incorrect password");
     }
 }
+<<<<<<< Updated upstream
 
+=======
+// ADD PET
+// accepts user_id, pet_name and pet_type, validates them and adds new pet to database
+elseif ($action === "add_pet") {
+    $user_id = $_POST['user_id'] ?? '';
+    $pet_name = $_POST['pet_name'] ?? '';
+    $pet_type = $_POST['pet_type'] ?? '';
+
+    if (!$user_id || !$pet_name || !$pet_type)
+        respond(400, "error", "Please complete pet details");
+
+    $stmt = $conn->prepare("INSERT INTO pets(user_id,pet_name,pet_type) VALUES(?,?,?)");
+    $stmt->bind_param("iss", $user_id, $pet_name, $pet_type);
+
+    $stmt->execute()
+        ? respond(201, "success", "Pet added successfully")
+        : respond(500, "error", "Failed to add pet");
+}
+// DELETE PET
+// accepts pet id, validates it and deletes the pet from database
+elseif ($action === "delete_pet") {
+    $id = $_POST['id'] ?? '';
+
+    if (!$id)
+        respond(400, "error", "Select a pet to delete");
+
+    $stmt = $conn->prepare("DELETE FROM pets WHERE id=?");
+    $stmt->bind_param("i", $id);
+
+    $stmt->execute()
+        ? respond(200, "success", "Pet deleted successfully")
+        : respond(500, "error", "Delete failed");
+}
+>>>>>>> Stashed changes
 // INVALID
 // if action is not valid i.e. does not exist, respond with error
 else {
