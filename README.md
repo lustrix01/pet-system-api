@@ -44,6 +44,37 @@ I have set up the initial backend files to get us started:
       - The `update_pet` endpoint. It accepts a pet ID and at least one field (`pet_name` or `pet_type`) to update an existing pet record.
       - The `update_user` endpoint. It accepts a valid existing user ID and updates `username` and/or `password` for that same user only.
 
+  - **`client.php` (Client 2 - Customer Panel):**
+  - This is the PHP-based client interface designed for pet owners. It utilizes server-side sessions and communicates with the REST API to provide a personalized management experience.
+
+  - **User Authentication:**
+    - Handles secure login and registration by sending POST requests to the API.
+    - Validates user input before sending data.
+    - Stores authenticated user data using PHP sessions.
+    - Provides logout functionality by destroying the active session.
+
+  - **Personalized Dashboard:**
+    - Dynamically retrieves pet records using the `get_pets` endpoint.
+    - Filters and displays only the pets associated with the currently logged-in user.
+    - Ensures that users can only view their own data for privacy and security.
+
+  - **Pet Registration:**
+    - Allows users to add new pets through a form interface.
+    - Uses a predefined list of pet types (e.g., Dog, Cat, Bird, etc.).
+    - Sends data to the `create_pet` endpoint for storage in the database.
+    - Displays success or error messages based on API response.
+
+  - **Update & Delete Logic:**
+    - Provides interactive modals for editing pet details such as name and type.
+    - Sends updated data to the `update_pet` endpoint.
+    - Enables pet deletion by sending requests to the `delete_pet` endpoint.
+    - Updates the UI in real-time to reflect changes without requiring a full page reload.
+
+  - **Responsive UI:**
+    - Built using Tailwind CSS for a clean and modern design.
+    - Ensures responsiveness across desktops, tablets, and mobile devices.
+    - Uses consistent styling for forms, buttons, modals, and tables to enhance user experience.
+
 ### Run with Docker
 
 1. Copy `.env.example` to `.env` if needed, then review DB credentials.
