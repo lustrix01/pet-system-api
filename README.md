@@ -1,14 +1,16 @@
 # Pet Management System - Backend API
 
-Hey team! This repository holds our Group REST API Enhancement project. I have initialized the repository with our core backend architecture.
+This repository holds our Group REST API Enhancement project. Please refer to the `./docs` directory for API documentation, video demonstration, sample screenshots, and member journals.
 
 ## Table of Contents
 1. [System Overview & Plan](#system-overview-plan)
 2. [Current Backend Files](#current-backend-files)
-3. [Client Screenshots](#client-screenshots)
-4. [Run with Docker](#run-with-docker)
-5. [Run with XAMPP](#run-with-xampp)
-6. [Current API Actions](#current-api-actions)
+3. [Run with Docker](#run-with-docker)
+4. [Run with XAMPP](#run-with-xampp)
+5. [Current API Actions](#current-api-actions)
+6. [Working Directory Tree](#directory-tree)
+7. [Client Screenshots](#client-screenshots)
+
 
 ## System Overview & Plan
 
@@ -19,6 +21,7 @@ Our planned architecture:
 - **The Backend (Server):** A PHP-based REST API that connects to a MySQL database. It will handle user authentication and CRUD operations for pet records.
 - **Client 1 (PHP):** A server-side Customer Panel where users can log in using sessions and manage their own pets.
 - **Client 2 (JavaScript/HTML):** A client-side Admin Dashboard using the Fetch API to view and manage all users and pets in the system.
+
 
 ## Current Backend Files
 
@@ -75,15 +78,6 @@ I have set up the initial backend files to get us started:
     - Ensures responsiveness across desktops, tablets, and mobile devices.
     - Uses consistent styling for forms, buttons, modals, and tables to enhance user experience.
 
-## Client Screenshots
-
-### `index.html`
-![](docs/screenshots/admin-dashboard.pets.png)
-![](docs/screenshots/admin-dashboard.users.png)
-
-### `client.php`
-![](docs/screenshots/user.registration-login.png)
-![](docs/screenshots/user.pet-management_acc-security.png)
 
 ## Run with Docker
 
@@ -98,6 +92,7 @@ I have set up the initial backend files to get us started:
    - phpMyAdmin: `http://localhost:8081`
 
 The DB is initialized automatically from `src/database/user_system.sql`.
+
 
 ## Run with XAMPP
 
@@ -136,4 +131,37 @@ Compatibility response mode:
 - `get_users` and `update_pet` return compatibility payloads by default.
 - Add `wrap=1` in query/body to return wrapped format:
   - `{ "status": "...", "message": "...", "data": ... }`
+
+
+
+## Directory Tree
+```
+pet-system-api/
+├── database-schema.png
+├── <docker configuration files>
+├── docs/
+│   ├── API Documentation.pdf      <--- API DOCUMENTATION
+│   ├── journals/
+│   │   └── <member journals>
+│   ├── screenshots/
+│   │   └── <sample screenshots of client app>
+│   └── video/
+│       └── <video demonstration of client app>
+├──src/
+│   ├── <server and client code>
+│   └── database/
+│       └── user_system.sql
+└── README.md
+```
+
   
+## Client Screenshots
+
+### `index.html`
+![](docs/screenshots/admin-dashboard.pets.png)
+![](docs/screenshots/admin-dashboard.users.png)
+
+### `client.php`
+![](docs/screenshots/user.registration-login.png)
+![](docs/screenshots/user.pet-management_acc-security.png)
+
