@@ -1,40 +1,127 @@
 <?php
 session_start();
-$api = "http://localhost:8080/user-api/api.php";
+$scheme = (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") ? "https" : "http";
+$host = $_SERVER["HTTP_HOST"] ?? "localhost";
+$scriptDir = str_replace("\\", "/", dirname($_SERVER["SCRIPT_NAME"] ?? "/"));
+$scriptDir = ($scriptDir === "/" || $scriptDir === ".") ? "" : rtrim($scriptDir, "/");
+$apiCandidates = [
+    $scheme . "://" . $host . $scriptDir . "/api.php",
+    $scheme . "://" . $host . "/api.php",
+    "http://localhost/pet-system-api/src/api.php",
+    "http://127.0.0.1/pet-system-api/src/api.php",
+    "http://localhost/api.php",
+    "http://127.0.0.1/api.php",
+    "http://localhost:8080/api.php",
+    "http://127.0.0.1:8080/api.php"
+];
 $message = "";
 $msgColor = "text-red-600";
 $pets = [];
+$redirectPath = strtok($_SERVER["REQUEST_URI"] ?? "client.php", "?");
+
+if (isset($_SESSION["flash_message"])) {
+    $message = (string)$_SESSION["flash_message"];
+    $msgColor = (string)($_SESSION["flash_color"] ?? "text-red-600");
+    unset($_SESSION["flash_message"], $_SESSION["flash_color"]);
+}
 
 function callAPI($data) {
-    global $api;
+    global $apiCandidates;
     $opts = ["http" => [
         "header" => "Content-type: application/x-www-form-urlencoded",
         "method" => "POST",
         "content" => http_build_query($data),
-        "ignore_errors" => true 
+        "ignore_errors" => true,
+        "timeout" => 10
     ]];
-    $response = @file_get_contents($api, false, stream_context_create($opts));
-    return json_decode($response, true);
+
+    $errors = [];
+    $uniqueCandidates = array_values(array_unique($apiCandidates));
+    foreach ($uniqueCandidates as $apiUrl) {
+        $response = @file_get_contents($apiUrl, false, stream_context_create($opts));
+        if ($response === false) {
+            $lastError = error_get_last();
+            $details = $lastError["message"] ?? "Unable to connect";
+            $errors[] = $apiUrl . " -> " . $details;
+            continue;
+        }
+
+        $decoded = json_decode($response, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        $errors[] = $apiUrl . " -> Invalid JSON response";
+    }
+
+    return [
+        "status" => "error",
+        "message" => "API call failed. Tried endpoints: " . implode(" | ", $errors)
+    ];
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $action = $_POST["action"];
-    if($action == "logout") { session_destroy(); header("Location: client.php"); exit; }
+    $action = $_POST["action"] ?? "";
+    if($action == "logout") { session_destroy(); header("Location: " . $redirectPath); exit; }
     elseif($action == "login") {
         $res = callAPI($_POST);
-        if ($res && $res["status"] == "success") {
+        if (
+            $res
+            && ($res["status"] ?? "") == "success"
+            && isset($res["data"]["user_id"], $res["data"]["username"])
+        ) {
             $_SESSION["user_id"] = $res["data"]["user_id"];
             $_SESSION["username"] = $res["data"]["username"];
         }
         $message = $res["message"] ?? "Connection error";
         if (isset($res["status"]) && $res["status"] == "success") $msgColor = "text-green-600";
-    } 
+    }
+    elseif($action == "update_user") {
+        if (!isset($_SESSION["user_id"])) {
+            $message = "Please login first";
+        } else {
+            $currentPassword = trim((string)($_POST["current_password"] ?? ""));
+            $newPassword = trim((string)($_POST["password"] ?? ""));
+            $confirmPassword = trim((string)($_POST["confirm_password"] ?? ""));
+
+            if ($currentPassword === "" || $newPassword === "" || $confirmPassword === "") {
+                $message = "Please fill in all password fields";
+            } elseif ($newPassword !== $confirmPassword) {
+                $message = "Passwords do not match";
+            } elseif (!isset($_SESSION["username"])) {
+                $message = "Unable to verify current password. Please login again.";
+            } else {
+                $auth = callAPI([
+                    "action" => "login",
+                    "username" => $_SESSION["username"],
+                    "password" => $currentPassword
+                ]);
+
+                if (($auth["status"] ?? "") !== "success") {
+                    $message = "Current password is incorrect";
+                } else {
+                    $res = callAPI([
+                        "action" => "update_user",
+                        "user_id" => $_SESSION["user_id"],
+                        "password" => $newPassword
+                    ]);
+                    $message = $res["message"] ?? "Password update failed";
+                    if (isset($res["status"]) && $res["status"] == "success") $msgColor = "text-green-600";
+                }
+            }
+        }
+    }
     else {
         $_POST["user_id"] = $_SESSION["user_id"] ?? null;
         $res = callAPI($_POST);
         $message = $res["message"] ?? "Action failed";
         if (isset($res["status"]) && $res["status"] == "success") $msgColor = "text-green-600";
     }
+
+    $_SESSION["flash_message"] = $message;
+    $_SESSION["flash_color"] = $msgColor;
+    header("Location: " . $redirectPath);
+    exit;
 }
 
 if (isset($_SESSION["user_id"])) {
@@ -63,7 +150,7 @@ $petTypes = ["Dog", "Cat", "Bird", "Hamster", "Rabbit", "Fish"];
     </div>
 
     <?php if($message): ?>
-        <p class="text-center text-sm font-medium mb-4 <?php echo $msgColor; ?>"><?php echo $message; ?></p>
+        <p class="text-center text-sm font-medium mb-4 <?php echo $msgColor; ?>"><?php echo htmlspecialchars($message, ENT_QUOTES, "UTF-8"); ?></p>
     <?php endif; ?>
 
     <?php if(!isset($_SESSION["user_id"])): ?>
@@ -85,6 +172,16 @@ $petTypes = ["Dog", "Cat", "Bird", "Hamster", "Rabbit", "Fish"];
                     <?php foreach($petTypes as $type): ?> <option value="<?php echo $type; ?>"><?php echo $type; ?></option> <?php endforeach; ?>
                 </select>
                 <button name="action" value="add_pet" class="w-full bg-gray-900 text-white p-2.5 rounded-lg text-sm font-bold hover:bg-black transition">Add Pet</button>
+            </div>
+        </form>
+
+        <form method="POST" class="bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-6">
+            <h3 class="text-sm font-bold mb-3 uppercase text-gray-400 tracking-widest">Account Security</h3>
+            <div class="flex flex-col gap-2">
+                <input name="current_password" type="password" placeholder="Current Password" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                <input name="password" type="password" placeholder="New Password" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                <input name="confirm_password" type="password" placeholder="Confirm New Password" required class="w-full p-2.5 bg-white border border-gray-200 rounded-lg text-sm">
+                <button name="action" value="update_user" class="w-full bg-blue-600 text-white p-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition">Update Password</button>
             </div>
         </form>
 
@@ -117,7 +214,7 @@ $petTypes = ["Dog", "Cat", "Bird", "Hamster", "Rabbit", "Fish"];
     <div class="bg-white rounded-2xl p-6 w-full max-w-xs shadow-2xl">
         <h3 class="font-bold text-lg mb-4">Edit Pet</h3>
         <form method="POST" class="space-y-3">
-            <input type="hidden" name="id" id="edit_id">
+            <input type="hidden" name="pet_id" id="edit_pet_id">
             <input name="pet_name" id="edit_name" required class="w-full p-2.5 border rounded-lg text-sm">
             <select name="pet_type" id="edit_type" required class="w-full p-2.5 border rounded-lg text-sm">
                 <?php foreach($petTypes as $type): ?> <option value="<?php echo $type; ?>"><?php echo $type; ?></option> <?php endforeach; ?>
@@ -147,7 +244,7 @@ $petTypes = ["Dog", "Cat", "Bird", "Hamster", "Rabbit", "Fish"];
 
 <script>
     function openEditModal(id, name, type) {
-        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_pet_id').value = id;
         document.getElementById('edit_name').value = name;
         document.getElementById('edit_type').value = type;
         document.getElementById('editModal').classList.remove('hidden');

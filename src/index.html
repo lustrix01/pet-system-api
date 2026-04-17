@@ -69,38 +69,77 @@
     </div>
 
     <script>
-      const URL = "http://localhost:8080/pet-system-api/src/api.php";
+      const API_CANDIDATES = (() => {
+        const origin = window.location.origin;
+        const path = window.location.pathname || "/";
+        const slash = path.lastIndexOf("/");
+        const dir = slash >= 0 ? path.slice(0, slash) : "";
 
-      // UPDATED: Robust API fetcher with error handling
+        return [
+          `${origin}${dir}/api.php`,
+          `${origin}/api.php`,
+          "http://localhost/pet-system-api/src/api.php",
+          "http://127.0.0.1/pet-system-api/src/api.php",
+          "http://localhost/api.php",
+          "http://127.0.0.1/api.php",
+          "http://localhost:8080/api.php",
+          "http://127.0.0.1:8080/api.php",
+        ];
+      })();
+      const PET_TYPES = ["Dog", "Cat", "Bird", "Hamster", "Rabbit", "Fish"];
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderError(message) {
+        const output = document.getElementById("output");
+        output.innerHTML =
+          '<div class="p-10 text-center text-red-500 font-bold"></div>';
+        output.firstElementChild.textContent = message || "No data returned.";
+      }
+
+      function renderInfo(message) {
+        const output = document.getElementById("output");
+        output.innerHTML =
+          '<div class="p-10 text-center text-gray-500 font-bold"></div>';
+        output.firstElementChild.textContent = message || "No records found.";
+      }
+
       async function api(data) {
-        try {
-          const res = await fetch(URL, {
-            method: "POST",
-            body: new URLSearchParams(data),
-          });
+        const errors = [];
+        const candidates = Array.from(new Set(API_CANDIDATES));
 
-          const text = await res.text(); // Read as raw text first
-
+        for (const url of candidates) {
           try {
-            return JSON.parse(text); // Try to parse as JSON
-          } catch (e) {
-            console.error("PHP Error outputting HTML instead of JSON:", text);
-            showNotif("Backend Error! Check the browser console.", true);
-            return {
-              status: "error",
-              message: "Server returned invalid format.",
-              data: [],
-            };
+            const res = await fetch(url, {
+              method: "POST",
+              body: new URLSearchParams(data),
+            });
+
+            const text = await res.text();
+            try {
+              return JSON.parse(text);
+            } catch (parseErr) {
+              errors.push(`${url} -> Invalid JSON response`);
+            }
+          } catch (networkError) {
+            errors.push(`${url} -> ${networkError.message}`);
           }
-        } catch (networkError) {
-          console.error("Network Error:", networkError);
-          showNotif("Network Error. Is your XAMPP server running?", true);
-          return {
-            status: "error",
-            message: "Network connection failed.",
-            data: [],
-          };
         }
+
+        console.error("API attempts failed:", errors);
+        showNotif("Backend Error. Check the browser console.", true);
+        return {
+          status: "error",
+          message: "Network connection failed.",
+          data: [],
+        };
       }
 
       function showNotif(msg, err = false) {
@@ -112,62 +151,140 @@
 
       async function getUsers() {
         const d = await api({ action: "get_users" });
+        const users = Array.isArray(d?.data)
+          ? d.data
+          : Array.isArray(d?.data?.data)
+            ? d.data.data
+            : [];
 
-        // Safety check to prevent crashing if data is empty or missing
-        if (!d || d.status !== "success" || !d.data) {
-          document.getElementById("output").innerHTML =
-            `<div class="p-10 text-center text-red-500 font-bold">${d.message || "No data returned."}</div>`;
+        if (!d || d.status !== "success") {
+          renderError(d?.message || "No data returned.");
+          return;
+        }
+
+        if (!users.length) {
+          renderInfo(d.message || "No users found.");
           return;
         }
 
         let html = `<table class="w-full text-left text-sm">
                 <tr class="bg-gray-50 text-gray-400 uppercase text-[10px] tracking-widest font-black"><th class="p-4">User</th><th class="p-4 text-right">Actions</th></tr>`;
-        d.data.forEach((u) => {
+
+        users.forEach((u) => {
+          const userId = Number(u?.id) || 0;
+          const username = escapeHtml(u?.username || "");
           html += `<tr class="border-t border-gray-50 hover:bg-gray-50/50">
-                    <td class="p-4 font-bold">${u.username} <span class="text-gray-300 font-normal ml-2">#${u.id}</span></td>
+                    <td class="p-4 font-bold">${username} <span class="text-gray-300 font-normal ml-2">#${userId}</span></td>
                     <td class="p-4 text-right flex justify-end gap-1">
-                        <button onclick="editUser(${u.id}, '${u.username}')" class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
+                        <button type="button" data-user-id="${userId}" data-username="${username}" class="edit-user-btn p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                         </button>
-                        <button onclick="confirmDelete('user', ${u.id}, '${u.username}')" class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        <button type="button" data-user-id="${userId}" data-username="${username}" class="delete-user-btn p-2 text-red-500 hover:bg-red-50 rounded-lg">
                             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                     </td></tr>`;
         });
-        document.getElementById("output").innerHTML = html + `</table>`;
+
+        document.getElementById("output").innerHTML = html + "</table>";
+
+        document.querySelectorAll(".edit-user-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = Number(btn.dataset.userId || 0);
+            const name = btn.dataset.username || "";
+            editUser(id, name);
+          });
+        });
+
+        document.querySelectorAll(".delete-user-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = Number(btn.dataset.userId || 0);
+            const name = btn.dataset.username || "";
+            confirmDelete("user", id, name);
+          });
+        });
       }
 
       async function getPets() {
         const d = await api({ action: "get_pets" });
+        const pets = Array.isArray(d?.data) ? d.data : [];
 
-        // Safety check
-        if (!d || d.status !== "success" || !d.data) {
-          document.getElementById("output").innerHTML =
-            `<div class="p-10 text-center text-red-500 font-bold">${d.message || "No data returned."}</div>`;
+        if (!d || d.status !== "success") {
+          renderError(d?.message || "No data returned.");
+          return;
+        }
+
+        if (!pets.length) {
+          renderInfo(d.message || "No pets found.");
           return;
         }
 
         let html = `<table class="w-full text-left text-sm">
                 <tr class="bg-gray-50 text-gray-400 uppercase text-[10px] tracking-widest font-black"><th class="p-4">Pet</th><th class="p-4">Owner</th><th class="p-4 text-right">Action</th></tr>`;
-        d.data.forEach((p) => {
+
+        pets.forEach((p) => {
+          const petId = Number(p?.pet_id ?? p?.id) || 0;
+          const ownerId = Number(p?.user_id) || 0;
+          const petName = escapeHtml(p?.pet_name || "");
+          const petType = escapeHtml(p?.pet_type || "");
+          const username = escapeHtml(p?.username || "");
           html += `<tr class="border-t border-gray-50">
-                    <td class="p-4 font-bold">${p.pet_name} <span class="block text-[10px] text-gray-400 font-normal">${p.pet_type}</span></td>
-                    <td class="p-4 text-gray-500">${p.username}</td>
+                    <td class="p-4 font-bold">${petName} <span class="text-gray-300 font-normal ml-2">#${petId}</span><span class="block text-[10px] text-gray-400 font-normal">${petType}</span></td>
+                    <td class="p-4 text-gray-500">${username} <span class="block text-[10px] text-gray-400 font-normal">User #${ownerId}</span></td>
                     <td class="p-4 text-right">
-                        <button onclick="confirmDelete('pet', ${p.id}, '${p.pet_name}')" class="text-red-400 hover:text-red-600 font-bold text-xs uppercase">Remove</button>
+                        <div class="flex justify-end gap-2">
+                          <button type="button" data-pet-id="${petId}" data-pet-name="${petName}" data-pet-type="${petType}" class="edit-pet-btn p-2 text-blue-500 hover:bg-blue-50 rounded-lg">
+                              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                          </button>
+                          <button type="button" data-pet-id="${petId}" data-pet-name="${petName}" class="delete-pet-btn text-red-400 hover:text-red-600 font-bold text-xs uppercase">Remove</button>
+                        </div>
                     </td></tr>`;
         });
-        document.getElementById("output").innerHTML = html + `</table>`;
+
+        document.getElementById("output").innerHTML = html + "</table>";
+
+        document.querySelectorAll(".edit-pet-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = Number(btn.dataset.petId || 0);
+            const name = btn.dataset.petName || "";
+            const type = btn.dataset.petType || "";
+            editPet(id, name, type);
+          });
+        });
+
+        document.querySelectorAll(".delete-pet-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = Number(btn.dataset.petId || 0);
+            const name = btn.dataset.petName || "";
+            confirmDelete("pet", id, name);
+          });
+        });
       }
 
       function editUser(id, name) {
+        if (!id) {
+          showNotif("Invalid user selected.", true);
+          return;
+        }
+
+        const safeName = escapeHtml(name);
         openModal(
-          "Update Username",
-          `<input id="new_username" value="${name}" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">`,
+          "Update User",
+          `<div class="space-y-2">
+            <input id="new_username" value="${safeName}" placeholder="New Username" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
+            <input id="new_password" type="password" placeholder="New Password (Optional)" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
+          </div>`,
           "bg-blue-600",
           async () => {
-            const val = document.getElementById("new_username").value;
-            const r = await api({ action: "update_user", id, username: val });
+            const val = (document.getElementById("new_username").value || "").trim();
+            const pass = document.getElementById("new_password").value || "";
+            if (!val && !pass) {
+              showNotif("Provide username or password to update.", true);
+              return;
+            }
+            const payload = { action: "update_user", user_id: id };
+            if (val) payload.username = val;
+            if (pass) payload.password = pass;
+            const r = await api(payload);
             closeModal();
             showNotif(r.message, r.status !== "success");
             getUsers();
@@ -175,10 +292,64 @@
         );
       }
 
+      function buildPetTypeOptions(selectedType) {
+        const selectedSafe = escapeHtml(selectedType || "");
+        const options = PET_TYPES.map((type) => {
+          const safeType = escapeHtml(type);
+          const selected = safeType === selectedSafe ? " selected" : "";
+          return `<option value="${safeType}"${selected}>${safeType}</option>`;
+        }).join("");
+
+        if (selectedSafe && !PET_TYPES.includes(selectedType)) {
+          return `<option value="${selectedSafe}" selected>${selectedSafe}</option>${options}`;
+        }
+        return options;
+      }
+
+      function editPet(id, name, type) {
+        if (!id) {
+          showNotif("Invalid pet selected.", true);
+          return;
+        }
+
+        const safeName = escapeHtml(name);
+        openModal(
+          "Update Pet",
+          `<div class="space-y-2">
+            <input id="edit_pet_name" value="${safeName}" placeholder="Pet Name" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
+            <select id="edit_pet_type" class="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20 outline-none">
+              ${buildPetTypeOptions(type)}
+            </select>
+          </div>`,
+          "bg-blue-600",
+          async () => {
+            const petName = (document.getElementById("edit_pet_name").value || "").trim();
+            const petType = (document.getElementById("edit_pet_type").value || "").trim();
+            if (!petName && !petType) {
+              showNotif("Provide pet name or pet type to update.", true);
+              return;
+            }
+            const payload = { action: "update_pet", pet_id: id };
+            if (petName) payload.pet_name = petName;
+            if (petType) payload.pet_type = petType;
+            const r = await api(payload);
+            closeModal();
+            showNotif(r.message, r.status !== "success");
+            getPets();
+          },
+        );
+      }
+
       function confirmDelete(type, id, name) {
+        if (!id || (type !== "user" && type !== "pet")) {
+          showNotif("Invalid delete request.", true);
+          return;
+        }
+
+        const safeName = escapeHtml(name);
         openModal(
           "Confirm Delete",
-          `<p class="text-sm text-gray-500">Remove <b>${name}</b> from the system?</p>`,
+          `<p class="text-sm text-gray-500">Remove <b>${safeName}</b> from the system?</p>`,
           "bg-red-600",
           async () => {
             const r = await api({ action: `delete_${type}`, id });

@@ -145,7 +145,21 @@ elseif ($action === "login") {
 
     $user = $res->fetch_assoc();
 
-    if (password_verify($password, $user['password'])) {
+    $stored_password = (string)($user["password"] ?? "");
+    $is_password_valid = false;
+
+    if ($stored_password !== "" && password_verify($password, $stored_password)) {
+        $is_password_valid = true;
+    } elseif ($stored_password !== "" && hash_equals($stored_password, $password)) {
+        // Backward compatibility: allow legacy plain-text entries and migrate on login.
+        $is_password_valid = true;
+        $new_hash = password_hash($password, PASSWORD_DEFAULT);
+        $rehash_stmt = $conn->prepare("UPDATE users SET password=? WHERE id=?");
+        $rehash_stmt->bind_param("si", $new_hash, $user["id"]);
+        $rehash_stmt->execute();
+    }
+
+    if ($is_password_valid) {
         respond(200, "success", "Login successful", [
             "user_id" => $user['id'],
             "username" => $username
@@ -191,6 +205,33 @@ elseif ($action === "delete_pet") {
         : respond(500, "error", "Delete failed");
 }
 
+// DELETE USER
+// accepts user id, validates it and deletes the user (pets cascade via FK)
+elseif ($action === "delete_user") {
+    require_method(["POST", "DELETE"]);
+    $id = (int) read_input($payload, "id", 0);
+
+    if (!$id)
+        respond(400, "error", "Select a user to delete");
+
+    try {
+        $stmt = $conn->prepare("DELETE FROM users WHERE id=?");
+        $stmt->bind_param("i", $id);
+
+        if (!$stmt->execute()) {
+            respond(500, "error", "Delete failed");
+        }
+
+        if ($stmt->affected_rows > 0) {
+            respond(200, "success", "User deleted successfully");
+        }
+
+        respond(404, "error", "User not found");
+    } catch (Throwable $e) {
+        respond(500, "error", "Delete failed");
+    }
+}
+
 
 // GET PETS
 // function that returns pets. user_id is an optional parameter; if left empty, it returns all pets.
@@ -199,12 +240,12 @@ elseif ($action === "get_pets") {
     $user_id = (int) read_input($payload, "user_id", 0);
 
     if ($user_id) {
-        $stmt = $conn->prepare("SELECT pets.id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id WHERE pets.user_id = ?");
+        $stmt = $conn->prepare("SELECT pets.id, pets.id AS pet_id, pets.user_id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id WHERE pets.user_id = ?");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $res = $stmt->get_result();
     } else {
-        $res = $conn->query("SELECT pets.id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id");
+        $res = $conn->query("SELECT pets.id, pets.id AS pet_id, pets.user_id, users.username, pet_name, pet_type FROM pets JOIN users ON pets.user_id = users.id");
     }
 
     $data = [];
@@ -212,7 +253,7 @@ elseif ($action === "get_pets") {
         $data[] = $row;
     }
 
-    respond(200, "success", "Pets retrieved", $data);
+    respond(200, "success", count($data) > 0 ? "Pets retrieved" : "No pets found", $data);
 }
 
 // GET USERS
@@ -220,40 +261,31 @@ elseif ($action === "get_pets") {
 elseif ($action === "get_users") {
     require_method(["GET", "POST"]);
     try {
-    $has_display_name = table_has_column($conn, "users", "display_name");
-    $has_created_at = table_has_column($conn, "users", "created_at");
+        $has_display_name = table_has_column($conn, "users", "display_name");
+        $has_created_at = table_has_column($conn, "users", "created_at");
 
-    $query = "SELECT id, username";
-    if ($has_display_name) $query .= ", display_name";
-    if ($has_created_at) $query .= ", created_at";
-    $query .= " FROM users";
+        $query = "SELECT id, username";
+        if ($has_display_name) $query .= ", display_name";
+        if ($has_created_at) $query .= ", created_at";
+        $query .= " FROM users";
 
-    $res = $conn->query($query);
-    $data = [];
+        $res = $conn->query($query);
+        $data = [];
 
-    while ($row = $res->fetch_assoc()) {
-        $user_item = [
-            "id" => (int)$row["id"],
-            "username" => $row["username"],
-            "display_name" => $has_display_name ? $row["display_name"] : null,
-            "created_at" => $has_created_at ? $row["created_at"] : null
-        ];
+        while ($row = $res->fetch_assoc()) {
+            $user_item = [
+                "id" => (int)$row["id"],
+                "username" => $row["username"],
+                "display_name" => $has_display_name ? $row["display_name"] : null,
+                "created_at" => $has_created_at ? $row["created_at"] : null
+            ];
 
-        $data[] = $user_item;
-    }
+            $data[] = $user_item;
+        }
 
-    if (count($data) > 0) {
-        respond_compat(200, ["data" => $data], "success", "Users retrieved");
-    }
-
-    respond_compat(200, ["message" => "No users found"], "success", "No users found");
+        respond(200, "success", count($data) > 0 ? "Users retrieved" : "No users found", $data);
     } catch (Throwable $e) {
-        respond_compat(
-            500,
-            ["status" => "error", "message" => "Failed to fetch users"],
-            "error",
-            "Failed to fetch users"
-        );
+        respond(500, "error", "Failed to fetch users");
     }
 }
 
