@@ -25,8 +25,6 @@ Our planned architecture:
 
 ## Current Backend Files
 
-I have set up the initial backend files to get us started:
-
 - **`db.php` (Database Integration):**
   - Connects to the local MySQL database named `user_system`.
   - Includes built-in error handling. If the database connection drops, it will output a clean JSON error (HTTP 500) instead of crashing the PHP script.
