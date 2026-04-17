@@ -44,7 +44,7 @@ I have set up the initial backend files to get us started:
       - The `update_pet` endpoint. It accepts a pet ID and at least one field (`pet_name` or `pet_type`) to update an existing pet record.
       - The `update_user` endpoint. It accepts a valid existing user ID and updates `username` and/or `password` for that same user only.
 
-  - **`client.php` (Client 2 - Customer Panel):**
+- **`client.php` (Client 2 - Customer Panel):**
   - This is the PHP-based client interface designed for pet owners. It utilizes server-side sessions and communicates with the REST API to provide a personalized management experience.
 
   - **User Authentication:**
