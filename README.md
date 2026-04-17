@@ -1,16 +1,18 @@
 # Pet Management System - Backend API
 
-Hey team! This repository holds our Group REST API Enhancement project. I have initialized the repository with our core backend architecture.
+This repository holds our Group REST API Enhancement project. Please refer to the `./docs` directory for API documentation, video demonstration, sample screenshots, and member journals.
 
 ## Table of Contents
 1. [System Overview & Plan](#system-overview-plan)
 2. [Current Backend Files](#current-backend-files)
-3. Client Screenshots (TBA)
-4. [Run with Docker](#run-with-docker)
-5. [Run with XAMPP](#run-with-xampp)
-6. [Current API Actions](#current-api-actions)
+3. [Run with Docker](#run-with-docker)
+4. [Run with XAMPP](#run-with-xampp)
+5. [Current API Actions](#current-api-actions)
+6. [Working Directory Tree](#directory-tree)
+7. [Client Screenshots](#client-screenshots)
 
-### System Overview & Plan
+
+## System Overview & Plan
 
 The goal of this project is to build a centralized REST API that can communicate with multiple different client applications.
 
@@ -20,7 +22,8 @@ Our planned architecture:
 - **Client 1 (PHP):** A server-side Customer Panel where users can log in using sessions and manage their own pets.
 - **Client 2 (JavaScript/HTML):** A client-side Admin Dashboard using the Fetch API to view and manage all users and pets in the system.
 
-### Current Backend Files
+
+## Current Backend Files
 
 I have set up the initial backend files to get us started:
 
@@ -37,12 +40,12 @@ I have set up the initial backend files to get us started:
   - **Currently Implemented:** 
       - The `register` endpoint. It accepts a username and password, checks if the user already exists, hashes the password for security, and saves it to the database.
       - The `login` endpoint. It accepts a username and password, checks if both fields match its corresponding record in the database, and responds accordingly: (1) for **empty field/s**, returns an error; (2) if **user does not exist**, it returns an error; (3) if the **password is incorrect**, it blocks login and returns an error; (4) if **username and password match** the ones in the database, it returns a success response.
+      - The `get_users` endpoint. It returns all users with compatibility fields for `display_name` and `created_at`.
+      - The `update_user` endpoint. It accepts a valid existing user ID and updates `username` and/or `password` for that same user only.
       - The `create_pet` endpoint. It accepts a pet name and its type (species), and saves it into the database.
+      - The `update_pet` endpoint. It accepts a pet ID and at least one field (`pet_name` or `pet_type`) to update an existing pet record.
       - The `delete_pet` endpoint. It accepts a pet ID and deletes the pet from the database. 
       - The `get_pets` endpoint. It optionally accepts a user ID. If left null (empty), it will return all pets in the database. If a user ID is specified, it responds with all the pets for that user.
-      - The `get_users` endpoint. It returns all users with compatibility fields for `display_name` and `created_at`.
-      - The `update_pet` endpoint. It accepts a pet ID and at least one field (`pet_name` or `pet_type`) to update an existing pet record.
-      - The `update_user` endpoint. It accepts a valid existing user ID and updates `username` and/or `password` for that same user only.
 
 - **`client.php` (Client 2 - Customer Panel):**
   - This is the PHP-based client interface designed for pet owners. It utilizes server-side sessions and communicates with the REST API to provide a personalized management experience.
@@ -75,7 +78,8 @@ I have set up the initial backend files to get us started:
     - Ensures responsiveness across desktops, tablets, and mobile devices.
     - Uses consistent styling for forms, buttons, modals, and tables to enhance user experience.
 
-### Run with Docker
+
+## Run with Docker
 
 1. Copy `.env.example` to `.env` if needed, then review DB credentials.
 2. From project root, run:
@@ -89,7 +93,8 @@ I have set up the initial backend files to get us started:
 
 The DB is initialized automatically from `src/database/user_system.sql`.
 
-### Run with XAMPP
+
+## Run with XAMPP
 
 1. Start **Apache** and **MySQL** in XAMPP.
 2. Place this project in `xampp/htdocs/`.
@@ -106,7 +111,7 @@ The DB is initialized automatically from `src/database/user_system.sql`.
 - `DB_NAME=user_system`
 - `DB_PORT=3306`
 
-### Current API Actions
+## Current API Actions
 
 Send requests to `src/api.php` with `action=<action_name>`.
 
@@ -126,4 +131,37 @@ Compatibility response mode:
 - `get_users` and `update_pet` return compatibility payloads by default.
 - Add `wrap=1` in query/body to return wrapped format:
   - `{ "status": "...", "message": "...", "data": ... }`
+
+
+
+## Directory Tree
+```
+pet-system-api/
+├── database-schema.png
+├── <docker configuration files>
+├── docs/
+│   ├── API Documentation.pdf      <--- API DOCUMENTATION
+│   ├── journals/
+│   │   └── <member journals>
+│   ├── screenshots/
+│   │   └── <sample screenshots of client app>
+│   └── video/
+│       └── <video demonstration of client app>
+├──src/
+│   ├── <server and client code>
+│   └── database/
+│       └── user_system.sql
+└── README.md
+```
+
   
+## Client Screenshots
+
+### `index.html`
+![](docs/screenshots/admin-dashboard.pets.png)
+![](docs/screenshots/admin-dashboard.users.png)
+
+### `client.php`
+![](docs/screenshots/user.registration-login.png)
+![](docs/screenshots/user.pet-management_acc-security.png)
+
