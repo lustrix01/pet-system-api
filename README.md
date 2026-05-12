@@ -2,6 +2,13 @@
 
 This repository holds our Group REST API Enhancement project. Please refer to the `./docs` directory for API documentation, video demonstration, sample screenshots, and member journals.
 
+### [👾] Group members
+1. Alvarez, Micaiah Devin
+2. Castillo, Angela Marielle
+3. Dechavez, Mickole
+4. Lumbang, Owhie
+5. Nator, Jazmin Erika
+
 ## Table of Contents
 1. [System Overview & Plan](#system-overview-plan)
 2. [Current Backend Files](#current-backend-files)
